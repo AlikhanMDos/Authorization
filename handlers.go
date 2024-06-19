@@ -4,10 +4,23 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
+	"time"
 )
 
+// @BasePath /api/v1
+
+// Register PingExample godoc
+// @Summary ping example
+// @Schemes
+// @Description do ping
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} Helloworld
+// @Router /example/helloworld [get]
 func Register(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
@@ -24,9 +37,23 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "User registered successfully",
+		"userData": user,
+	})
 }
 
+// @BasePath /api/v1
+
+// Login PingExample godoc
+// @Summary ping example
+// @Schemes
+// @Description do ping
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} Helloworld
+// @Router /example/helloworld [get]
 func Login(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
@@ -51,9 +78,20 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{"token": token, "userData": user})
 }
 
+// @BasePath /api/v1
+
+// Logout PingExample godoc
+// @Summary ping example
+// @Schemes
+// @Description do ping
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} Helloworld
+// @Router /example/helloworld [get]
 func Logout(c *gin.Context) {
 	// Clear the JWT token from the client (for example, from cookies)
 	c.SetCookie("jwt_token", "", -1, "/", "localhost", false, true)
@@ -64,22 +102,67 @@ func Logout(c *gin.Context) {
 	})
 }
 
-// UserProfile handles the GET /profile route
-// UserProfile handles the GET /profile route
+func UpdatePassword(c *gin.Context) {
+	id := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	var user User
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Ensure the profile belongs to the authenticated user
+	authorID := c.MustGet("userID").(primitive.ObjectID)
+	filter := bson.M{"_id": objID, "author_id": authorID}
+
+	update := bson.M{
+		"$set": bson.M{
+			"name":     user.Name,
+			"phone":    user.Phone,
+			"password": user.Password,
+		},
+	}
+
+	result := userCollection.FindOneAndUpdate(context.Background(), filter, update)
+	if result.Err() != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile info"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+}
+
+// @BasePath /api/v1
+
+// UserProfile PingExample godoc
+// @Summary ping example
+// @Schemes
+// @Description do ping
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} Helloworld
+// @Router /example/helloworld [get]
 func UserProfile(c *gin.Context) {
 	// Extract phone number from query parameter
-	userId := c.Query("id")
-	if userId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Phone number is required"})
+	id := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User Id is required"})
 		return
 	}
 
 	// Find user by phone number in MongoDB
 	var user User
-	err := userCollection.FindOne(context.Background(), bson.M{"_id": userId}).Decode(&user)
-	if err != nil {
+	err1 := userCollection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&user)
+	if err1 != nil {
 		log.Println("Error fetching user profile:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user profile"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Failed to fetch user profile"})
 		return
 	}
 
@@ -104,6 +187,100 @@ func UserProfile(c *gin.Context) {
 //
 //	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 //}
+
+func CreatePost(c *gin.Context) {
+	var post Post
+	if err := c.ShouldBindJSON(&post); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	post.ID = primitive.NewObjectID()
+	post.Date = time.Now()
+	post.AuthorID = c.MustGet("userID").(primitive.ObjectID) // Assuming you have userID in context
+
+	_, err := postCollection.InsertOne(context.Background(), post)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create post"})
+		return
+	}
+
+	c.JSON(http.StatusOK, post)
+}
+
+func GetPosts(c *gin.Context) {
+	cursor, err := postCollection.Find(context.Background(), bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch posts"})
+		return
+	}
+	defer cursor.Close(context.Background())
+
+	var posts []Post
+	if err = cursor.All(context.Background(), &posts); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse posts"})
+		return
+	}
+
+	c.JSON(http.StatusOK, posts)
+}
+
+func UpdatePost(c *gin.Context) {
+	id := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		return
+	}
+
+	var post Post
+	if err := c.ShouldBindJSON(&post); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Ensure the post belongs to the authenticated user
+	authorID := c.MustGet("userID").(primitive.ObjectID)
+	filter := bson.M{"_id": objID, "author_id": authorID}
+
+	update := bson.M{
+		"$set": bson.M{
+			"title": post.Title,
+			"text":  post.Text,
+			"image": post.Image,
+			"date":  time.Now(),
+		},
+	}
+
+	result := postCollection.FindOneAndUpdate(context.Background(), filter, update)
+	if result.Err() != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Post updated successfully"})
+}
+
+func DeletePost(c *gin.Context) {
+	id := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid post ID"})
+		return
+	}
+
+	// Ensure the post belongs to the authenticated user
+	authorID := c.MustGet("userID").(primitive.ObjectID)
+	filter := bson.M{"_id": objID, "author_id": authorID}
+
+	result := postCollection.FindOneAndDelete(context.Background(), filter)
+	if result.Err() != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete post"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
+}
 
 func Protected(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Welcome to the protected route!"})

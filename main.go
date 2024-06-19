@@ -1,8 +1,12 @@
 package main
 
+// swagger embed files
 import (
+	docs "Authorization/docs"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
 	"sync"
 )
@@ -21,10 +25,31 @@ var (
 //var (
 //	errBadCredentials = errors.New("email or password is incorrect")
 //)
+// @title           Swagger Example API
+// @version         1.0
+// @description     This is a sample server celler server.
+// @termsOfService  http://swagger.io/terms/
 
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.basic  BasicAuth
+
+// @externalDocs.description  OpenAPI
+// @externalDocs.url          https://swagger.io/resources/open-api/
 func main() {
 	initDB()
 	r := gin.Default()
+	//url := ginSwagger.URL("http://localhost:8080/docs/swagger.json")
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Initialize CORS middleware
 	config := cors.DefaultConfig()
@@ -38,11 +63,17 @@ func main() {
 	r.POST("/register", Register)
 	r.POST("/login", Login)
 	r.POST("/logout", Logout)
-	r.GET("/users/id", UserProfile)
+	r.GET("/users/:id", UserProfile)
 
 	protected := r.Group("/protected")
 	protected.Use(AuthMiddleware())
 	protected.GET("/", Protected)
+
+	protected.GET("/posts", GetPosts)
+	protected.POST("/posts", CreatePost)
+	protected.PUT("/posts/:id", UpdatePost)
+	protected.DELETE("/posts/:id", DeletePost)
+
 	r.Run(":8080")
 }
 
