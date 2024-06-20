@@ -8,6 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AuthMiddleware функция middleware для аутентификации через JWT.
+//
+//	@Summary		Middleware для проверки авторизации через JWT
+//	@Description	Middleware проверяет наличие и валидность JWT в заголовке Authorization.
+//	@Tags			Authentication
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerToken
+//	@Param			Authorization	header		string				true	"Bearer JWT token"
+//	@Success		200				{string}	string				"Authorized"
+//	@Failure		401				{object}	map[string]string	"Unauthorized"
+//	@Router			/auth [get]
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

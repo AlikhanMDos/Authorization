@@ -10,17 +10,18 @@ import (
 	"time"
 )
 
-// @BasePath /api/v1
-
-// Register PingExample godoc
-// @Summary ping example
-// @Schemes
-// @Description do ping
-// @Tags example
-// @Accept json
-// @Produce json
-// @Success 200 {string} Helloworld
-// @Router /example/helloworld [get]
+// Register godoc
+//
+//	@Summary		Register a new user
+//	@Description	Register a new user with a unique phone number
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		User					true	"User details"
+//	@Success		200		{object}	map[string]interface{}	"User registered successfully"
+//	@Failure		400		{object}	map[string]string		"Invalid input"
+//	@Failure		500		{object}	map[string]string		"Error creating user"
+//	@Router			/register [post]
 func Register(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
@@ -43,17 +44,19 @@ func Register(c *gin.Context) {
 	})
 }
 
-// @BasePath /api/v1
-
-// Login PingExample godoc
-// @Summary ping example
-// @Schemes
-// @Description do ping
-// @Tags example
-// @Accept json
-// @Produce json
-// @Success 200 {string} Helloworld
-// @Router /example/helloworld [get]
+// Login godoc
+//
+//	@Summary		Login an existing user
+//	@Description	Login an existing user with phone number and password
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			user	body		User					true	"User credentials"
+//	@Success		200		{object}	map[string]interface{}	"User logged in successfully"
+//	@Failure		400		{object}	map[string]string		"Invalid input"
+//	@Failure		401		{object}	map[string]string		"Invalid phone or password"
+//	@Failure		500		{object}	map[string]string		"Error generating token"
+//	@Router			/login [post]
 func Login(c *gin.Context) {
 	var user User
 	if err := c.BindJSON(&user); err != nil {
@@ -81,17 +84,17 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token, "userData": user})
 }
 
-// @BasePath /api/v1
+//	@BasePath	/api/v1
 
-// Logout PingExample godoc
-// @Summary ping example
-// @Schemes
-// @Description do ping
-// @Tags example
-// @Accept json
-// @Produce json
-// @Success 200 {string} Helloworld
-// @Router /example/helloworld [get]
+// Logout godoc
+//
+//	@Summary		Logout the current user
+//	@Description	Logout the current user by clearing the JWT token
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]string	"Logged out successfully"
+//	@Router			/logout [post]
 func Logout(c *gin.Context) {
 	// Clear the JWT token from the client (for example, from cookies)
 	c.SetCookie("jwt_token", "", -1, "/", "localhost", false, true)
@@ -102,6 +105,19 @@ func Logout(c *gin.Context) {
 	})
 }
 
+// UpdatePassword godoc
+//
+//	@Summary		Update user password
+//	@Description	Update the password for the authenticated user
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"User ID"
+//	@Param			user	body		User				true	"User details"
+//	@Success		200		{object}	map[string]string	"Profile updated successfully"
+//	@Failure		400		{object}	map[string]string	"Invalid ID or input"
+//	@Failure		500		{object}	map[string]string	"Failed to update profile info"
+//	@Router			/users/{id}/password [put]
 func UpdatePassword(c *gin.Context) {
 	id := c.Param("id")
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -137,17 +153,17 @@ func UpdatePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
 }
 
-// @BasePath /api/v1
-
-// UserProfile PingExample godoc
-// @Summary ping example
-// @Schemes
-// @Description do ping
-// @Tags example
-// @Accept json
-// @Produce json
-// @Success 200 {string} Helloworld
-// @Router /example/helloworld [get]
+// UserProfile godoc
+//
+//	@Summary		Get user profile
+//	@Description	Get the profile of a user by ID
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string					true	"User ID"
+//	@Success		200	{object}	map[string]interface{}	"User profile"
+//	@Failure		404	{object}	map[string]string		"User Id is required or Failed to fetch user profile"
+//	@Router			/users/{id} [get]
 func UserProfile(c *gin.Context) {
 	// Extract phone number from query parameter
 	id := c.Param("id")
@@ -173,21 +189,18 @@ func UserProfile(c *gin.Context) {
 	})
 }
 
-// Extract token from Authorization header
-//tokenString := extractTokenFromHeader(c.Request.Header.Get("Authorization"))
-//if tokenString == "" {
-//	c.JSON(http.StatusBadRequest, gin.H{"error": "Token not provided"})
-//	return
-//}
-
-//	// Add token to blacklist
-//	mutex.Lock()
-//	defer mutex.Unlock()
-//	tokenBlacklist[tokenString] = struct{}{}
+// CreatePost godoc
 //
-//	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
-//}
-
+//	@Summary		Create a new post
+//	@Description	Create a new post for the authenticated user
+//	@Tags			Post
+//	@Accept			json
+//	@Produce		json
+//	@Param			post	body		Post				true	"Post details"
+//	@Success		200		{object}	Post				"Post created successfully"
+//	@Failure		400		{object}	map[string]string	"Invalid input"
+//	@Failure		500		{object}	map[string]string	"Failed to create post"
+//	@Router			/posts [post]
 func CreatePost(c *gin.Context) {
 	var post Post
 	if err := c.ShouldBindJSON(&post); err != nil {
@@ -208,6 +221,16 @@ func CreatePost(c *gin.Context) {
 	c.JSON(http.StatusOK, post)
 }
 
+// GetPosts godoc
+//
+//	@Summary		Get all posts
+//	@Description	Get all posts from the database
+//	@Tags			Post
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{array}		Post				"List of posts"
+//	@Failure		500	{object}	map[string]string	"Failed to fetch posts or parse posts"
+//	@Router			/posts [get]
 func GetPosts(c *gin.Context) {
 	cursor, err := postCollection.Find(context.Background(), bson.M{})
 	if err != nil {
@@ -225,6 +248,19 @@ func GetPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, posts)
 }
 
+// UpdatePost godoc
+//
+//	@Summary		Update a post
+//	@Description	Update an existing post by ID for the authenticated user
+//	@Tags			Post
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		string				true	"Post ID"
+//	@Param			post	body		Post				true	"Post details"
+//	@Success		200		{object}	map[string]string	"Post updated successfully"
+//	@Failure		400		{object}	map[string]string	"Invalid post ID or input"
+//	@Failure		500		{object}	map[string]string	"Failed to update post"
+//	@Router			/posts/{id} [put]
 func UpdatePost(c *gin.Context) {
 	id := c.Param("id")
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -261,6 +297,18 @@ func UpdatePost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Post updated successfully"})
 }
 
+// DeletePost godoc
+//
+//	@Summary		Delete a post
+//	@Description	Delete an existing post by ID for the authenticated user
+//	@Tags			Post
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		string				true	"Post ID"
+//	@Success		200	{object}	map[string]string	"Post deleted successfully"
+//	@Failure		400	{object}	map[string]string	"Invalid post ID"
+//	@Failure		500	{object}	map[string]string	"Failed to delete post"
+//	@Router			/posts/{id} [delete]
 func DeletePost(c *gin.Context) {
 	id := c.Param("id")
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -282,6 +330,15 @@ func DeletePost(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Post deleted successfully"})
 }
 
+// Protected godoc
+//
+//	@Summary		Access protected route
+//	@Description	Access a protected route for authenticated users
+//	@Tags			Example
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]string	"Welcome to the protected route!"
+//	@Router			/protected [get]
 func Protected(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Welcome to the protected route!"})
 }
